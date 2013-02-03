@@ -32,7 +32,13 @@ setup(
     long_description=open('README.rst').read(),
     packages = find_packages(),
     entry_points = {
-        'nose.plugins.0.10': ['holmium = holmium.core:HolmiumNose',]
+        'nose.plugins.0.10': [
+            'holmium = holmium.core:HolmiumNose',
+            ],
+         'console_scripts' : [
+             'holmium-runner = holmium.core.test_runner:main',
+             ]
+
         },
     **extra
 )

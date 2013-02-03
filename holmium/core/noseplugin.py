@@ -30,6 +30,8 @@ class HolmiumNose(Plugin):
         parser.add_option("", "--holmium-browser", dest="ho_browser", type = "choice", choices = list(holmium.core.browser_mapping.keys()), help="the selenium driver to invoke")
         parser.add_option("", "--holmium-remote", dest="ho_remote", help = "full url to remote selenium instance")
         parser.add_option("", "--holmium-capabilities", dest="ho_cap", help = "json dictionary of extra capabilities")
+        parser.add_option("", "--holmium-screenshot", dest="ho_scr", help="take periodic screenshots in to provided director")
+        parser.add_option("", "--holmium-screensize", dest="ho_size", help="width,height for the driver to be set to", default=None)
         parser.add_option("", "--holmium-useragent", dest="ho_ua", help="User-agent string to use. Only available for firefox & chrome")
 
     def configure( self, options, conf ):
@@ -67,13 +69,25 @@ class HolmiumNose(Plugin):
                 except Exception as e:
                     self.logger.error("unable to load capabilities")
                     raise SkipTest("holmium could not be initialized due to a problem with the provided capabilities " + str(e))
+            self.take_screenshots = options.ho_scr != None
+            if self.take_screenshots:
+                self.screenshot_dir = options.ho_scr
+            self.screen_size = None
             self.driver_initializer_fn = lambda:holmium.core.browser_mapping[browser](**args)
+            if options.ho_size:
+                try:
+                    self.screen_size = [int(k) for k in options.ho_size.split(",")]
+                except Exception,e:
+                    holmium.core.log.error("failed to parse screen size %s" % options.ho_size)
+                    raise SkipTest("failed to parse screen size")
             self.enabled = True
 
     def beforeTest(self, test):
         try:
             if not self.driver:
                 self.driver = self.driver_initializer_fn()
+                if self.screen_size:
+                    self.driver.set_window_size(*self.screen_size)
         except Exception as e:
             self.logger.error("failed to initialize selenium driver %s" % e)
             raise SkipTest("holmium could not be initialized due to a problem with the required selenium driver")
@@ -85,6 +99,10 @@ class HolmiumNose(Plugin):
         except Exception as e:
             self.logger.debug("config.py not found for %s" % base_file)
 
+        if self.take_screenshots:
+            print self.driver, os.path.join(self.screenshot_dir, *test.address()[1:])
+            holmium.core.screenshot_wrapper.set_target( self.driver , os.path.join(self.screenshot_dir, ".".join(test.address()[1:])))
+
     def startTest(self, test):
         if self.driver:
             try:
@@ -94,6 +112,8 @@ class HolmiumNose(Plugin):
                 self.logger.error("error clearing cookies %s" % e)
 
     def finalize(self, result):
-        if self.driver:
-            self.driver.quit()
-
+        try:
+            if self.driver:
+                self.driver.quit()
+        except Exception,e:
+            self.logger.warn("failure shutting down driver")

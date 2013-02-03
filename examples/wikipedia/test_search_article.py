@@ -1,11 +1,11 @@
-import pages
+import wikipage
 import unittest
 import selenium.webdriver
 
 class TextSearchArticle(unittest.TestCase):
     def setUp(self):
         self.driver = selenium.webdriver.Firefox()
-        self.page = pages.WikiPedia(self.driver, "http://wikipedia.org")
+        self.page = wikipage.WikiPedia(self.driver, "http://wikipedia.org")
 
     def test_text_search_alllangs(self):
         for language in self.page.languages:

@@ -6,11 +6,11 @@ Page objects
 
 google search
 ~~~~~~~~~~~~~
-.. literalinclude:: ../../examples/google/pages.py 
+.. literalinclude:: ../../examples/google/googlepage.py 
 
 wikipedia 
 ~~~~~~~~~
-.. literalinclude:: ../../examples/wikipedia/pages.py
+.. literalinclude:: ../../examples/wikipedia/wikipage.py
 
 
 Test cases

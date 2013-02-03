@@ -6,6 +6,8 @@ import holmium
 import inspect
 import weakref
 import types
+import operator
+
 try:
     from ordereddict import OrderedDict
 except ImportError:
@@ -18,8 +20,30 @@ class Locators(selenium.webdriver.common.by.By):
     """
     pass
 
+def logging_callback(name, action):
+    holmium.core.log.info("requested %s on PageElement %s" % (action, name))
 
-def enhanced (web_element):
+class TrackedWebElement(object):
+
+    callbacks = [logging_callback]
+    @staticmethod
+    def register_callback(callback):
+        TrackedWebElement.callbacks.append(callback)
+    def __init__(self, obj, labels):
+        self.name = ".".join([str(k) for k in labels])
+        self.obj = obj
+    def __getattribute__(self, key):
+        name = object.__getattribute__(self, "name")
+        element = object.__getattribute__(object.__getattribute__(self, "obj"), key)
+        if isinstance(element, types.MethodType) and not key.startswith("find_"): # ignore tracking selector methods
+            for callback in TrackedWebElement.callbacks:
+                try:
+                    callback(name, key)
+                except Exception,e:
+                    holmium.core.log.error("failed to callback %s for element %s:%s" % (callback, name, key))
+        return element
+
+def enhanced (web_element, *labels):
     """
     incase a higher level abstraction for a WebElement is available
     we will use that in PageObjects. (e.g. a select element is converted into
@@ -27,8 +51,8 @@ def enhanced (web_element):
     """
     abstraction_mapping = {'select': Select}
     if web_element.tag_name in abstraction_mapping.keys():
-        return abstraction_mapping[web_element.tag_name](web_element)
-    return web_element
+        return TrackedWebElement(abstraction_mapping[web_element.tag_name](web_element), labels)
+    return TrackedWebElement(web_element, labels)
 
 
 class PageElementList(list):
@@ -87,21 +111,23 @@ class PageObject(object):
         elif driver.current_url:
             self.home = driver.current_url
         self.iframe = iframe
-        def update_element(el):
+        def update_element(name, el):
             if issubclass(el.__class__, ElementGetter):
                 el.driver = self.driver
                 el.iframe = self.iframe
+                el.pretty_name  = self.__class__.__name__ + "." + name
         for el in inspect.getmembers(self.__class__):
             if issubclass(el[1].__class__, list):
                 for item in el[1]:
-                    update_element(item)
+                    idx = el[1].index(item)
+                    update_element(el[0] + "%d" % idx, item)
                 self.__setattr__(el[0], PageElementList(self, el[1]))
             elif issubclass(el[1].__class__, dict):
-                for item in el[1].values():
-                    update_element(item)
+                for name, item in el[1].items():
+                    update_element(el[0]+"[%s]" % name , item)
                 self.__setattr__(el[0], PageElementDict(self, el[1]))
             else:
-                update_element(el[1])
+                update_element(el[0], el[1])
 
         if url:
             self.driver.get(url)
@@ -154,7 +180,7 @@ class ElementGetter(object):
         holmium.core.log.debug("locator:%s, query_string:%s, timeout:%d" %
                               (locator_type, query_string, timeout))
 
-    def get_element(self, method = None):
+    def get_element(self, method = None ):
         if self.base_element:
             if isinstance(self.base_element, types.LambdaType):
                 el = self.base_element()
@@ -181,8 +207,8 @@ class ElementGetter(object):
         if self.driver and self.iframe:
             self.driver.switch_to_default_content()
             self.driver.switch_to_frame(self.iframe)
-        return _meth(self.locator_type, self.query_string)
-
+        _element = _meth(self.locator_type, self.query_string)
+        return _element
 
 class PageElement(ElementGetter):
     """
@@ -194,7 +220,7 @@ class PageElement(ElementGetter):
         if not instance:
             return self
         try:
-            return self.value_mapper(enhanced(self.get_element(self.driver.find_element)))
+            return self.value_mapper(enhanced(self.get_element(self.driver.find_element), self.pretty_name))
         except NoSuchElementException:
             return None
 
@@ -211,7 +237,9 @@ class PageElements(ElementGetter):
         if not instance:
             return self
         try:
-            return [self.value_mapper(enhanced(el)) for el in self.get_element(self.driver.find_elements)]
+            idx=0
+            inc = lambda:operator.add(idx, 1)
+            return [self.value_mapper(enhanced(el, self.pretty_name, inc())) for el in self.get_element(self.driver.find_elements)]
         except NoSuchElementException:
             return []
 
@@ -236,7 +264,7 @@ class PageElementMap(PageElements):
         if not instance:
             return self
         try:
-            return OrderedDict((self.key_mapper(el), self.value_mapper(enhanced(el))) for el in self.get_element(self.driver.find_elements))
+            return OrderedDict((self.key_mapper(el), self.value_mapper(enhanced(el, self.pretty_name, self.key_mapper(el)))) for el in self.get_element(self.driver.find_elements))
         except NoSuchElementException:
             return {}
 
