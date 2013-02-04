@@ -35,7 +35,7 @@ class TrackedWebElement(object):
     def __getattribute__(self, key):
         name = object.__getattribute__(self, "name")
         element = object.__getattribute__(object.__getattribute__(self, "obj"), key)
-        if isinstance(element, types.MethodType) and not key.startswith("find_"): # ignore tracking selector methods
+        if isinstance(element, types.MethodType) and not key.startswith("find_") and not key.startswith("is_"):
             for callback in TrackedWebElement.callbacks:
                 try:
                     callback(name, key)
@@ -239,7 +239,7 @@ class PageElements(ElementGetter):
         try:
             idx=0
             inc = lambda:operator.add(idx, 1)
-            return [self.value_mapper(enhanced(el, self.pretty_name, inc())) for el in self.get_element(self.driver.find_elements)]
+            return [self.value_mapper(enhanced(el, self.pretty_name + "[%d]" % inc())) for el in self.get_element(self.driver.find_elements)]
         except NoSuchElementException:
             return []
 
@@ -264,7 +264,7 @@ class PageElementMap(PageElements):
         if not instance:
             return self
         try:
-            return OrderedDict((self.key_mapper(el), self.value_mapper(enhanced(el, self.pretty_name, self.key_mapper(el)))) for el in self.get_element(self.driver.find_elements))
+            return OrderedDict((self.key_mapper(el), self.value_mapper(enhanced(el, self.pretty_name + "[%s]"% str(self.key_mapper(el))))) for el in self.get_element(self.driver.find_elements))
         except NoSuchElementException:
             return {}
 

@@ -37,7 +37,7 @@ class Screenshot():
         self.threadpool = multiprocessing.pool.ThreadPool(5)
     def _trigger(self, element, action, delay=0):
         try:
-            holmium.core.log.info("triggered screenshot. delaying %ds" % delay)
+            holmium.core.log.debug("triggered screenshot. delaying %ds" % delay)
             time.sleep(delay)
             if self.lock.acquire() and self.driver and self.output_dir:
                 screenshot_file = os.path.join(self.output_dir, str(self.inc) + ".png")
@@ -55,7 +55,7 @@ class Screenshot():
             self.lock.release()
 
     def trigger(self, element=None, action  = None):
-        self.threadpool.apply_async( self._trigger, (element, action, 0.25))
+        self.threadpool.apply( self._trigger, (element, action, 0))
 
     def set_target(self, driver, name):
         self.driver = driver
