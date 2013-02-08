@@ -6,7 +6,6 @@ import holmium
 import inspect
 import weakref
 import types
-import operator
 
 try:
     from ordereddict import OrderedDict
@@ -21,27 +20,43 @@ class Locators(selenium.webdriver.common.by.By):
     pass
 
 def logging_callback(name, action):
-    holmium.core.log.info("requested %s on PageElement %s" % (action, name))
+    holmium.core.log.debug("requested %s on PageElement %s" % (action, name))
 
-class TrackedWebElement(object):
+def safe_lambda(fn):
+    def _inner(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except Exception,e:
+            return None
+    return _inner
+
+class ExtendedWebElement(object):
 
     callbacks = [logging_callback]
     @staticmethod
     def register_callback(callback):
-        TrackedWebElement.callbacks.append(callback)
+        ExtendedWebElement.callbacks.append(callback)
+
     def __init__(self, obj, labels):
         self.name = ".".join([str(k) for k in labels])
         self.obj = obj
+
+    def focus(self):
+        self.obj.parent.execute_script("arguments[0].focus()", self.obj)
+
     def __getattribute__(self, key):
-        name = object.__getattribute__(self, "name")
-        element = object.__getattribute__(object.__getattribute__(self, "obj"), key)
-        if isinstance(element, types.MethodType) and not key.startswith("find_") and not key.startswith("is_"):
-            for callback in TrackedWebElement.callbacks:
-                try:
-                    callback(name, key)
-                except Exception,e:
-                    holmium.core.log.error("failed to callback %s for element %s:%s" % (callback, name, key))
-        return element
+        try:
+            return object.__getattribute__(self, key)
+        except:
+            name = object.__getattribute__(self, "name")
+            element = object.__getattribute__(object.__getattribute__(self, "obj"), key)
+            if isinstance(element, types.MethodType) and not key.startswith("find_") and not key.startswith("is_"):
+                for callback in ExtendedWebElement.callbacks:
+                    try:
+                        callback(name, key)
+                    except Exception,e:
+                        holmium.core.log.error("failed to callback %s for element %s:%s" % (callback, name, key))
+            return element
 
 def enhanced (web_element, *labels):
     """
@@ -51,8 +66,8 @@ def enhanced (web_element, *labels):
     """
     abstraction_mapping = {'select': Select}
     if web_element.tag_name in abstraction_mapping.keys():
-        return TrackedWebElement(abstraction_mapping[web_element.tag_name](web_element), labels)
-    return TrackedWebElement(web_element, labels)
+        return ExtendedWebElement(abstraction_mapping[web_element.tag_name](web_element), labels)
+    return ExtendedWebElement(web_element, labels)
 
 
 class PageElementList(list):
@@ -234,15 +249,21 @@ class PageElements(ElementGetter):
         return lambda: self.__get__(self, self.__class__)[idx]
 
     def __get__(self, instance, owner):
+        elements = []
         if not instance:
             return self
         try:
-            idx=0
-            inc = lambda:operator.add(idx, 1)
-            return [self.value_mapper(enhanced(el, self.pretty_name + "[%d]" % inc())) for el in self.get_element(self.driver.find_elements)]
+            idx = 0
+            web_elements = self.get_element(self.driver.find_elements)
+            for el in web_elements:
+                try:
+                    elements.append(self.value_mapper(enhanced(el, self.pretty_name + "[%d]" % idx)))
+                    idx+=1
+                except NoSuchElementException,e:
+                    pass
         except NoSuchElementException:
             return []
-
+        return elements
 
 class PageElementMap(PageElements):
     """
