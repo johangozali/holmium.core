@@ -2,10 +2,14 @@ language: python
 python:
     - "2.6"
     - "2.7"
+    - "3.3"
 
 install:
     - pip install . --use-mirrors
     - pip install -r requirements.txt --use-mirrors
 
-script: nosetests
+script: nosetests --with-coverage --cover-package=holmium.core
+
+after_success:
+  - coveralls
 

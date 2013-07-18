@@ -1,4 +1,11 @@
 .. _PageObjects: http://code.google.com/p/selenium/wiki/PageObjects
+.. |travis-ci| image:: https://secure.travis-ci.org/mig33/holmium.core.png
+    :target: https://travis-ci.org/#!/mig33/holmium.core 
+.. |coverall| image:: https://coveralls.io/repos/mig33/holmium.core/badge.png?branch=master
+    :target: https://coveralls.io/r/mig33/holmium.core
+
+holmium.core |travis-ci| |coverall| 
+-----------------------------------
 
 Introduction
 ============
@@ -10,8 +17,6 @@ Nothing beats an example. Conventionally automated tests integrating with python
 
     import selenium.webdriver
     import unittest
-
-
 
     class SeleniumHQTest(unittest.TestCase):
         def setUp(self):
@@ -61,7 +66,7 @@ Lets take the above test case for a spin with holmium. Take note of the followin
 .. code-block:: python
   
     from holmium.core import HolmiumTestCase, PageObject, PageElement, Locators, PageElementMap
-
+    import unittest
 
     class SeleniumHQPage(PageObject):
         nav_links = PageElementMap( Locators.CSS_SELECTOR

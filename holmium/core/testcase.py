@@ -16,7 +16,9 @@ browser_mapping = {"firefox": webdriver.Firefox,
                     "opera" : webdriver.Opera,
                     "remote": webdriver.Remote,
                     "phantomjs": webdriver.PhantomJS,
-                    "android" : webdriver.Remote}
+                    "iphone" : webdriver.Remote,
+                    "ipad": webdriver.Remote,
+                    "android": webdriver.Remote}
 
 #:
 capabilities = {"firefox": webdriver.DesiredCapabilities.FIREFOX,
@@ -24,7 +26,9 @@ capabilities = {"firefox": webdriver.DesiredCapabilities.FIREFOX,
                 "ie": webdriver.DesiredCapabilities.INTERNETEXPLORER,
                 "opera": webdriver.DesiredCapabilities.OPERA,
                 "phantomjs":webdriver.DesiredCapabilities.PHANTOMJS,
-                "android" : webdriver.DesiredCapabilities.ANDROID}
+                "iphone":webdriver.DesiredCapabilities.IPHONE,
+                "ipad":webdriver.DesiredCapabilities.IPAD,
+                "android":webdriver.DesiredCapabilities.ANDROID}
 
 class Screenshot():
     def __init__(self):
@@ -66,7 +70,6 @@ class Screenshot():
         os.makedirs(name)
         self.inc = 0
         self.screenshot_mappings = []
-
 
 
 class HolmiumTestCase(unittest.TestCase):
