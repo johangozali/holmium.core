@@ -70,9 +70,10 @@ def parse_config( config_file ):
     return browser_configs
 
 def build_report( output_dir, results_map ):
-    for res in pkg_resources.resource_listdir("holmium.core","res"):
-        data = pkg_resources.resource_stream("holmium.core", "res/"+res).read()
-        open(os.path.join(output_dir, res), "w").write(data)
+    if pkg_resources.isdir("holmium.core/res"):
+        for res in pkg_resources.resource_listdir("holmium.core","res"):
+            data = pkg_resources.resource_stream("holmium.core", "res/"+res).read()
+            open(os.path.join(output_dir, res), "w").write(data)
     js_data ={"suites":[]}
     for s in results_map:
         output = results_map[s]
