@@ -1,10 +1,10 @@
-import pages
+import googlepage
 import unittest
 import selenium.webdriver
 class TextSearchTest(unittest.TestCase):
     def setUp(self):
         self.driver = selenium.webdriver.Firefox()
-        self.page = pages.GoogleMain(self.driver, "http://www.google.com")
+        self.page = googlepage.GoogleMain(self.driver, "http://www.google.com")
 
     def test_text_search(self):
         self.assertTrue(len(self.page.search("selenium").search_results) > 0)
